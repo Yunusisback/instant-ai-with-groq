@@ -13,7 +13,9 @@ export default function Header({
   selectedModel, 
   setSelectedModel, 
   onExportChat,
-  onToggleSettings
+  onToggleSettings,
+  chats = [],
+  activeChatId
 }) {
   const [showModelDropdown, setShowModelDropdown] = useState(false);
 
@@ -23,31 +25,53 @@ export default function Header({
     { id: 'mixtral-8x7b', name: 'Mixtral 8x7B', description: 'Dengeli / Balanced' },
   ];
 
+  // tarih hesaplama
+  const activeChat = chats.find(c => c.id === activeChatId);
+  const dateObj = activeChat ? new Date(activeChat.date) : new Date();
+  const formattedDate = dateObj.toLocaleDateString('tr-TR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  });
+
   return (
     <div className={`border-b transition-colors relative z-50 ${darkMode ? 'bg-black/50 backdrop-blur-sm border-white/10' : 'bg-white/80 backdrop-blur-sm border-gray-200'}`}>
       <div className="w-full px-4 sm:px-6 py-4 flex items-center justify-between">
         
-        {/* Sol kısım Sidebar Toggle & Logo */}
+        {/* sol kısım */}
         <div className="flex items-center gap-3">
+          
+          {/* Sidebar kapalıysa Buton ve Logo Göster */}
           {!showSidebar && (
+            <>
               <button onClick={() => setShowSidebar(true)} className={`p-2 -ml-2 rounded-lg transition-colors ${darkMode ? 'hover:bg-white/10 text-gray-400 hover:text-white' : 'hover:bg-black/10 text-gray-600 hover:text-black'}`}>
                 <PanelLeft className="w-6 h-6" />
               </button>
+              <div className="flex items-center gap-2">
+                 <div className="w-8 h-8 flex items-center justify-center">
+                     <Lottie animationData={eyeAnimation} loop={true} style={{ width: 40, height: 40 }} className="scale-[1.5]" />
+                  </div>
+              </div>
+            </>
           )}
-          {!showSidebar && (
-             <div className="flex items-center gap-2">
-                <div className="w-8 h-8 flex items-center justify-center">
-                    <Lottie animationData={eyeAnimation} loop={true} style={{ width: 40, height: 40 }} className="scale-[1.5]" />
-                 </div>
-             </div>
-          )}
+
+          {/*  Tarih Göstergesi */}
+          <div className={`
+             flex items-center text-sm sm:text-base font-medium tracking-wide select-none transition-all duration-300 ease-in-out
+             ${showSidebar ? 'lg:ml-[290px]' : ''} 
+             ${!showSidebar ? `ml-2 pl-3 border-l ${darkMode ? 'border-white/10' : 'border-zinc-300'}` : ''}
+             ${darkMode ? 'text-gray-300' : 'text-gray-600'}
+          `}>
+             {formattedDate}
+          </div>
+
         </div>
 
-        {/* sağ kısım */}
+        {/* Sağ kısım */}
         <div className="flex items-center gap-2">
           
-          {/* Model seçimi  */}
-          <div className="relative">
+          {/* Model seçimi */}
+          <div className="relative hidden sm:block">
             <button onClick={() => setShowModelDropdown(!showModelDropdown)} className={`text-sm px-3 py-2 rounded-lg border outline-none transition-colors flex items-center gap-2 font-medium ${darkMode ? 'bg-white/5 border-white/10 text-white/80 hover:bg-white/10' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50 shadow-sm'}`}>
               <span>{models.find(m => m.id === selectedModel)?.name}</span>
               <svg className={`w-4 h-4 transition-transform ${showModelDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
@@ -72,22 +96,22 @@ export default function Header({
             )}
           </div>
 
-          {/*  dil (Language) */}
+          {/* Dil */}
           <button onClick={toggleLanguage} className={`px-3 py-2 rounded-lg text-xs font-bold transition-colors border ${darkMode ? 'border-white/10 text-zinc-400 hover:text-white hover:bg-white/10' : 'border-zinc-200 text-zinc-600 hover:text-black hover:bg-zinc-100'}`}>
             {language === 'tr' ? 'EN' : 'TR'}
           </button>
 
-          {/*  tema (Dark Mode Toggle) */}
+          {/* Tema */}
           <button onClick={toggleDarkMode} className={`p-2 rounded-lg transition-colors ${darkMode ? 'hover:bg-white/10 text-white/70' : 'hover:bg-black/10 text-black/70'}`}>
             {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
           </button>
           
-          {/* 4. Ayarlar (Settings) */}
+          {/* Ayarlar */}
           <button onClick={onToggleSettings} className={`p-2 rounded-lg transition-colors ${darkMode ? 'hover:bg-white/10 text-white/70' : 'hover:bg-black/10 text-black/70'}`}>
             <Settings className="w-5 h-5" />
           </button>
 
-          {/* 5. İndir (Export) */}
+          {/* İndirme  */}
           <button onClick={onExportChat} className={`p-2 rounded-lg transition-colors ${darkMode ? 'hover:bg-white/10 text-white/70' : 'hover:bg-black/10 text-black/70'}`}>
             <Download className="w-5 h-5" />
           </button>

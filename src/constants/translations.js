@@ -1,34 +1,34 @@
 export const translations = {
   tr: {
-    // Sidebar
-    newChat: 'Yeni Konuşma',
+    newChat: 'Yeni Sohbet',
+    chats: 'Sohbetler',
     projects: 'Projeler',
+    artifacts: 'Artifacts',
+    recents: 'Geçmiş',
+    pinned: 'Sabitlenenler',
+    noRecentChats: 'Geçmiş sohbet yok',
     settings: 'Ayarlar',
     help: 'Yardım',
-    history: 'GEÇMİŞ',
     freePlan: 'Ücretsiz Plan',
-
-
     
-    // Header
+    // Menü İşlemleri
+    rename: 'Yeniden Adlandır',
+    renameTitle: 'Bu sohbeti yeniden adlandırın', 
+    cancel: 'İptal', 
+    pin: 'Sabitle',
+    unpin: 'Sabitlemeyi Kaldır',
+    delete: 'Sil',
+    confirmDelete: 'Silmek istediğine emin misin?',
     aiAssistant: 'AI Asistan',
-    
-    // Welcome 
     welcomeTitle: 'Nasıl yardımcı olabilirim?',
-    
-    // Settings Modal
     settingsTitle: 'Ayarlar',
     username: 'Kullanıcı Adı',
     edit: 'Düzenle',
     save: 'Kaydet',
     clearChat: 'Sohbeti Temizle',
-    
-    // Input Area
     inputPlaceholder: 'Mesajınızı yazın...',
     disclaimer: 'Yapay zeka hata yapabilir. Önemli bilgileri kontrol edin.',
     listening: 'Dinleniyor...',
-    
-    // Prompts (Öneriler)
     prompts: [
       { text: 'Bugün Neler Oldu?', prompt: 'Dünyadan ve Türkiyeden Haberler' },
       { text: 'Küresel Kriz Analizi', prompt: 'Son dönemde dünya çapında öne çıkan bir jeopolitik çatışmayı analiz et' },
@@ -37,34 +37,36 @@ export const translations = {
     ]
   },
   en: {
-    // Sidebar
+
     newChat: 'New Chat',
+    chats: 'Chats',
     projects: 'Projects',
+    artifacts: 'Artifacts',
+    recents: 'Recents',
+    pinned: 'Pinned',
+    noRecentChats: 'No recent chats',
     settings: 'Settings',
     help: 'Help',
-    history: 'HISTORY',
     freePlan: 'Free Plan',
     
-    // Header
+    // Menu Actions
+    rename: 'Rename',
+    renameTitle: 'Rename this chat', 
+    cancel: 'Cancel', 
+    pin: 'Pin',
+    unpin: 'Unpin',
+    delete: 'Delete',
+    confirmDelete: 'Are you sure to delete?',
     aiAssistant: 'AI Assistant',
-    
-    // Welcome Screen
     welcomeTitle: 'How can I help you?',
- 
-    
-    // Settings Modal
     settingsTitle: 'Settings',
     username: 'Username',
     edit: 'Edit',
     save: 'Save',
     clearChat: 'Clear Chat',
-    
-    // Input Area
     inputPlaceholder: 'Type a message...',
     disclaimer: 'AI can make mistakes. Please verify important information.',
     listening: 'Listening...',
-    
-    // Prompts (Suggestions)
     prompts: [
       { text: 'What Happened Today?', prompt: 'News from the World and Turkey' },
       { text: 'Global Crisis Analysis', prompt: 'Analyze a prominent geopolitical conflict recently' },

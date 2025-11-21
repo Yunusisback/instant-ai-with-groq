@@ -5,21 +5,29 @@ import Sidebar from './components/Sidebar';
 import Settings from './components/Settings';
 import Header from './components/Header';
 import WelcomeScreen from './components/WelcomeScreen';
+import RenameModal from './components/RenameModal';
 import { sendMessage } from './api/aiService';
 import { translations } from './constants/translations';
 
 function App() {
-  // Temel durumlar
   const [showSidebar, setShowSidebar] = useState(typeof window !== 'undefined' ? window.innerWidth >= 1024 : false);
   const [language, setLanguage] = useState(() => localStorage.getItem('language') || 'tr');
   const [darkMode, setDarkMode] = useState(() => {
     const saved = localStorage.getItem('darkMode');
     return saved !== null ? saved === 'true' : true;
   });
+  
   const [chats, setChats] = useState(() => {
-    const saved = localStorage.getItem('chatHistory');
-    return saved ? JSON.parse(saved) : [];
+    try {
+      const saved = localStorage.getItem('chatHistory');
+      const parsed = saved ? JSON.parse(saved) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (e) {
+      console.error("Sohbet geçmişi yüklenemedi, sıfırlanıyor.", e);
+      return [];
+    }
   });
+  
   const [activeChatId, setActiveChatId] = useState(null);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -27,30 +35,29 @@ function App() {
   const [username, setUsername] = useState(localStorage.getItem('username') || 'Misafir');
   const [selectedModel, setSelectedModel] = useState('llama-3.1-8b-instant');
 
-  // Ref'ler
+  const [renameModalData, setRenameModalData] = useState({ isOpen: false, chat: null });
+
   const messagesEndRef = useRef(null);
   const tokenQueueRef = useRef([]);
   const typingIntervalRef = useRef(null);
   const abortControllerRef = useRef(null);
+  const isSubmittingRef = useRef(false);
 
-  const t = translations[language];
+  const t = translations[language] || translations['tr'];
 
-  // Aktif sohbet mesajları 
   const messages = useMemo(() => {
     const chat = chats.find(c => c.id === activeChatId);
     return chat ? chat.messages : [];
   }, [chats, activeChatId]);
 
-
-  
-  // Yeni sohbet oluştur
   function handleNewChat() {
     const newId = Date.now();
     const welcome = language === 'tr' ? 'Merhaba! Size nasıl yardımcı olabilirim?' : 'Hello! How can I help you?';
     const newChat = {
       id: newId,
-      title: language === 'tr' ? 'Yeni Konuşma' : 'New Chat',
+      title: language === 'tr' ? 'Yeni Sohbet' : 'New Chat',
       date: new Date().toISOString(),
+      pinned: false,
       messages: [{ role: 'assistant', content: welcome }]
     };
     setChats(prev => [newChat, ...prev]);
@@ -58,21 +65,23 @@ function App() {
     if (window.innerWidth < 1024) setShowSidebar(false);
   }
 
-  // Otomatik scroll
   const scrollToBottom = () => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   useEffect(() => scrollToBottom(), [messages]);
 
-  // LocalStorage senkronizasyonu
   useEffect(() => localStorage.setItem('chatHistory', JSON.stringify(chats)), [chats]);
   
-  // Başlangıç kontrolü
   useEffect(() => {
-    if (chats.length === 0 && !activeChatId) handleNewChat();
-    else if (chats.length > 0 && !activeChatId) setActiveChatId(chats[0].id);
+    const timer = setTimeout(() => {
+      if (chats.length === 0 && !activeChatId) {
+        handleNewChat();
+      } else if (chats.length > 0 && !activeChatId) {
+        setActiveChatId(chats[0].id);
+      }
+    }, 0);
+    return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, []); 
 
-  // Dil ve tema değiştir
   const toggleLanguage = () => {
     const newLang = language === 'tr' ? 'en' : 'tr';
     setLanguage(newLang);
@@ -85,13 +94,11 @@ function App() {
     localStorage.setItem('darkMode', String(newMode));
   };
 
-  // Kullanıcı adı güncelle
   const handleUpdateUsername = (newName) => {
     setUsername(newName);
     localStorage.setItem('username', newName);
   };
 
-  // Sohbet sil
   const handleDeleteChat = (id) => {
     const remaining = chats.filter(c => c.id !== id);
     setChats(remaining);
@@ -100,7 +107,25 @@ function App() {
     }
   };
 
-  // Mevcut sohbeti temizle
+
+  const handleRenameStart = (chat) => {
+    setRenameModalData({ isOpen: true, chat });
+  };
+
+  const handleRenameSave = (newTitle) => {
+    if (renameModalData.chat) {
+      setChats(prev => prev.map(c => 
+        c.id === renameModalData.chat.id ? { ...c, title: newTitle } : c
+      ));
+    }
+  };
+
+  const handlePinChat = (id) => {
+    setChats(prev => prev.map(chat => 
+      chat.id === id ? { ...chat, pinned: !chat.pinned } : chat
+    ));
+  };
+
   const handleClearChat = () => {
     setChats(prev => prev.map(c =>
       c.id === activeChatId ? { ...c, messages: [{ role: 'assistant', content: t.welcomeTitle }] } : c
@@ -108,7 +133,6 @@ function App() {
     setShowSettings(false);
   };
 
-  // Sohbeti dışa aktar
   const handleExportChat = () => {
     const text = messages.map(m => `${m.role === 'user' ? 'User' : 'AI'}: ${m.content}`).join('\n\n');
     const blob = new Blob([text], { type: 'text/plain' });
@@ -120,17 +144,19 @@ function App() {
     URL.revokeObjectURL(url);
   };
 
-  // Yanıt üretimi durdur
   const handleStop = () => {
     abortControllerRef.current?.abort();
     abortControllerRef.current = null;
     clearInterval(typingIntervalRef.current);
     setLoading(false);
+    isSubmittingRef.current = false;
   };
 
-  // Mesaj gönder
   const handleSend = async () => {
-    if (!input.trim() || loading) return;
+    if (!input.trim() || isSubmittingRef.current) return;
+
+    isSubmittingRef.current = true;
+    setLoading(true);
 
     let currentChatId = activeChatId;
     if (!currentChatId) {
@@ -143,7 +169,6 @@ function App() {
 
     const userMessage = { role: 'user', content: input };
 
-    // Kullanıcı mesajını ekle  boş AI mesajı
     setChats(prev => prev.map(c => {
       if (c.id === currentChatId) {
         const isFirst = c.messages.length === 1;
@@ -158,10 +183,8 @@ function App() {
     }));
 
     setInput('');
-    setLoading(true);
     abortControllerRef.current = new AbortController();
 
-    // Yazma animasyonu
     typingIntervalRef.current = setInterval(() => {
       if (tokenQueueRef.current.length > 0) {
         const char = tokenQueueRef.current.shift();
@@ -190,6 +213,7 @@ function App() {
               clearInterval(check);
               clearInterval(typingIntervalRef.current);
               setLoading(false);
+              isSubmittingRef.current = false; 
             }
           }, 100);
         },
@@ -199,13 +223,12 @@ function App() {
       if (err.name !== 'AbortError') console.error('API Hatası:', err);
       clearInterval(typingIntervalRef.current);
       setLoading(false);
+      isSubmittingRef.current = false; 
     }
   };
 
   return (
     <div className={`flex h-screen transition-colors duration-200 ${darkMode ? 'bg-[#09090b] text-white' : 'bg-white text-gray-900'}`}>
-      
-      {/* Sidebar */}
       <Sidebar
         showSidebar={showSidebar}
         toggleSidebar={() => setShowSidebar(!showSidebar)}
@@ -219,14 +242,13 @@ function App() {
           if (window.innerWidth < 1024) setShowSidebar(false);
         }}
         onDeleteChat={handleDeleteChat}
+        onRenameStart={handleRenameStart} 
+        onPinChat={handlePinChat}
         onToggleSettings={() => setShowSettings(true)}
         username={username}
       />
 
-      {/* Ana içerik */}
       <div className="flex-1 flex flex-col min-w-0 relative">
-
-        {/* Üst bar */}
         <Header
           showSidebar={showSidebar}
           setShowSidebar={setShowSidebar}
@@ -238,9 +260,10 @@ function App() {
           setSelectedModel={setSelectedModel}
           onExportChat={handleExportChat}
           onToggleSettings={() => setShowSettings(true)}
+          chats={chats}
+          activeChatId={activeChatId}
         />
 
-        {/* Ayarlar modalı */}
         <Settings
           isOpen={showSettings}
           onClose={() => setShowSettings(false)}
@@ -251,7 +274,15 @@ function App() {
           onClearChat={handleClearChat}
         />
 
-        {/* Mesaj alanı */}
+        <RenameModal 
+          isOpen={renameModalData.isOpen}
+          onClose={() => setRenameModalData({ ...renameModalData, isOpen: false })}
+          onRename={handleRenameSave}
+          initialValue={renameModalData.chat?.title}
+          t={t}
+          darkMode={darkMode}
+        />
+
         <div className="flex-1 overflow-y-auto scrollbar-thin">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
             {messages.length <= 1 ? (
@@ -269,7 +300,6 @@ function App() {
           </div>
         </div>
 
-        {/* Giriş alanı */}
         <ChatInput
           input={input}
           setInput={setInput}
