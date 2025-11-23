@@ -39,16 +39,16 @@ export default function Header({
       <div className="w-full px-4 sm:px-6 py-4 flex items-center justify-between">
         
         {/* sol kısım */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 ml-5.5">
           
           {/* Sidebar kapalıysa Buton ve Logo Göster */}
           {!showSidebar && (
             <>
-              <button onClick={() => setShowSidebar(true)} className={`p-2 -ml-2 rounded-lg transition-colors ${darkMode ? 'hover:bg-white/10 text-gray-400 hover:text-white' : 'hover:bg-black/10 text-gray-600 hover:text-black'}`}>
+              <button onClick={() => setShowSidebar(true)} className={`p-3 -ml-2 rounded-lg transition-colors ${darkMode ? 'hover:bg-white/10 text-gray-400 hover:text-white' : 'hover:bg-black/10 text-gray-600 hover:text-black'}`}>
                 <PanelLeft className="w-6 h-6" />
               </button>
               <div className="flex items-center gap-2">
-                 <div className="w-8 h-8 flex items-center justify-center">
+                 <div className="w-8 h-8 flex items-center justify-center ">
                      <Lottie animationData={eyeAnimation} loop={true} style={{ width: 40, height: 40 }} className="scale-[1.5]" />
                   </div>
               </div>
@@ -68,7 +68,7 @@ export default function Header({
         </div>
 
         {/* Sağ kısım */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 mr-5">
           
           {/* Model seçimi */}
           <div className="relative hidden sm:block">

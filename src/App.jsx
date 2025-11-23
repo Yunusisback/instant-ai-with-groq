@@ -9,6 +9,20 @@ import RenameModal from './components/RenameModal';
 import { sendMessage } from './api/aiService';
 import { translations } from './constants/translations';
 
+// Dosya okuma  
+const readFile = (file) => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    if (file.type.startsWith('image/')) {
+      reader.readAsDataURL(file); // Resimler için Base64
+    } else {
+      reader.readAsText(file); 
+    }
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = (error) => reject(error);
+  });
+};
+
 function App() {
   const [showSidebar, setShowSidebar] = useState(typeof window !== 'undefined' ? window.innerWidth >= 1024 : false);
   const [language, setLanguage] = useState(() => localStorage.getItem('language') || 'tr');
@@ -153,8 +167,11 @@ function App() {
     isSubmittingRef.current = false;
   };
 
-  const handleSend = async () => {
-    if (!input.trim() || isSubmittingRef.current) return;
+
+  const handleSend = async (file = null) => {
+
+    // Eğer ne input ne de dosya varsa dur
+    if ((!input.trim() && !file) || isSubmittingRef.current) return;
 
     isSubmittingRef.current = true;
     setLoading(true);
@@ -168,12 +185,38 @@ function App() {
     clearInterval(typingIntervalRef.current);
     tokenQueueRef.current = [];
 
-    const userMessage = { role: 'user', content: input };
+    // Dosya İşleme ve İçerik Oluşturma
+    let uiContent = input;
+    try {
+      if (file) {
+        const fileData = await readFile(file);
+        if (file.type.startsWith('image/')) {
 
+          // Resim ise mmarkdown olarak ekle 
+          uiContent = `${input}\n\n![Görsel](${fileData})`;
+        } else {
+
+          // Metin ise kod bloğu içinde ekle
+          uiContent = `${input}\n\n--- ${file.name} ---\n\`\`\`\n${fileData}\n\`\`\``;
+        }
+      }
+    } catch (error) {
+      console.error("Dosya okuma hatası:", error);
+      uiContent += "\n\n[Dosya yüklenirken hata oluştu]";
+    }
+
+    const userMessage = { role: 'user', content: uiContent };
+
+    // UI Güncelleme
     setChats(prev => prev.map(c => {
       if (c.id === currentChatId) {
         const isFirst = c.messages.length === 1;
-        const title = isFirst ? input.slice(0, 30) + (input.length > 30 ? '...' : '') : c.title;
+
+        // Başlık yoksa ve input boşsa dosya yazsın
+        let titleText = input.slice(0, 30);
+        if (!titleText && file) titleText = "Dosya Gönderimi";
+        
+        const title = isFirst ? titleText + (input.length > 30 ? '...' : '') : c.title;
         return {
           ...c,
           title,
@@ -186,6 +229,7 @@ function App() {
     setInput('');
     abortControllerRef.current = new AbortController();
 
+    // Yazma efekti
     typingIntervalRef.current = setInterval(() => {
       if (tokenQueueRef.current.length > 0) {
         const char = tokenQueueRef.current.shift();
@@ -202,7 +246,28 @@ function App() {
 
     try {
       const chat = chats.find(c => c.id === currentChatId) || { messages: [] };
-      const apiMessages = [...chat.messages, userMessage].map(m => ({ role: m.role, content: m.content }));
+      
+      // API için Mesajları Hazırla (Resim varsa Vision formatına çevir)
+      const apiMessages = [...chat.messages, userMessage].map(m => {
+
+        // Eğer mesajda base64 resim varsa API  için uygun JSON formatına çevir
+        if (m.role === 'user' && m.content.includes('data:image')) {
+           const imageRegex = /!\[.*?\]\((data:image\/.*?;base64,.*?)\)/;
+           const match = m.content.match(imageRegex);
+           if (match) {
+             const imageUrl = match[1];
+             const textContent = m.content.replace(match[0], '').trim();
+             return {
+               role: m.role,
+               content: [
+                 { type: "text", text: textContent || "Bu görsel hakkında ne düşünüyorsun?" },
+                 { type: "image_url", image_url: { url: imageUrl } }
+               ]
+             };
+           }
+        }
+        return { role: m.role, content: m.content };
+      });
 
       await sendMessage(
         apiMessages,
@@ -309,7 +374,7 @@ function App() {
         <ChatInput
           input={input}
           setInput={setInput}
-          onSend={handleSend}
+          onSend={handleSend}  
           onStop={handleStop}
           loading={loading}
           darkMode={darkMode}
