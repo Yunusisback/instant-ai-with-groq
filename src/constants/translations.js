@@ -1,5 +1,6 @@
 export const translations = {
   tr: {
+    guest:"Misafir",
     newChat: 'Yeni Sohbet',
     chats: 'Sohbetler',
     projects: 'Projeler',
@@ -38,6 +39,7 @@ export const translations = {
   },
   en: {
 
+    guest:"Guest",
     newChat: 'New Chat',
     chats: 'Chats',
     projects: 'Projects',

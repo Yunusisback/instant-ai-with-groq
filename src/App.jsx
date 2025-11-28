@@ -42,21 +42,19 @@ function App() {
     }
   });
   
+  
   const [activeChatId, setActiveChatId] = useState(null);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [username, setUsername] = useState(localStorage.getItem('username') || 'Misafir');
   const [selectedModel, setSelectedModel] = useState('llama-3.1-8b-instant');
-
   const [renameModalData, setRenameModalData] = useState({ isOpen: false, chat: null });
-
   const messagesEndRef = useRef(null);
   const tokenQueueRef = useRef([]);
   const typingIntervalRef = useRef(null);
   const abortControllerRef = useRef(null);
   const isSubmittingRef = useRef(false);
-
   const t = translations[language] || translations['tr'];
 
   const messages = useMemo(() => {
@@ -98,8 +96,18 @@ function App() {
 
   const toggleLanguage = () => {
     const newLang = language === 'tr' ? 'en' : 'tr';
-    setLanguage(newLang);
-    localStorage.setItem('language', newLang);
+
+    // Eğer kullanıcı adı varsayılan (Misafir/Guest) ise yeni dile çevir
+    if (translations[language] && translations[newLang]) {
+        const currentGuestName = translations[language].guest;
+        if (username === currentGuestName) {
+            const newGuestName = translations[newLang].guest;
+            setUsername(newGuestName);
+            localStorage.setItem('username', newGuestName);
+        }
+    }
+
+    setLanguage(newLang);   localStorage.setItem('language', newLang);
   };
 
   const toggleDarkMode = () => {
@@ -248,7 +256,7 @@ function App() {
       const chat = chats.find(c => c.id === currentChatId) || { messages: [] };
       
       // API için Mesajları Hazırla (Resim varsa Vision formatına çevir)
-      const apiMessages = [...chat.messages, userMessage].map(m => {
+      const formattedMessages = [...chat.messages, userMessage].map(m => {
 
         // Eğer mesajda base64 resim varsa API  için uygun JSON formatına çevir
         if (m.role === 'user' && m.content.includes('data:image')) {
@@ -268,6 +276,18 @@ function App() {
         }
         return { role: m.role, content: m.content };
       });
+
+      
+     // Sistem mesajı ekleme 
+      const systemPrompt = {
+        role: "system",
+        content: language === 'tr' 
+          ? "Sen yardımsever bir yapay zeka asistanısın. Kullanıcı ile her zaman TÜRKÇE konuş. Cevapların net, açıklayıcı ve samimi olsun." 
+          : "You are a helpful AI assistant. Always speak in ENGLISH with the user. Be clear, explanatory, and friendly."
+      };
+
+      // System mesajını en başa ekleyerek API'ye gönderiyoruz
+      const apiMessages = [systemPrompt, ...formattedMessages];
 
       await sendMessage(
         apiMessages,
@@ -381,6 +401,9 @@ function App() {
           selectedModel={selectedModel}
           placeholderText={t.inputPlaceholder}
         />
+      </div>
+      <div className="hidden">
+        {translations[language]?.guest}
       </div>
     </div>
   );

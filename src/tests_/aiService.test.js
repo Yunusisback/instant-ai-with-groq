@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { sendMessage } from '../api/aiService';
 
 // Mock verileri
-const MOCK_MESSAGE = "Merhaba, dünya!";
 const MOCK_CHUNKS = [
   'data: {"choices":[{"delta":{"content":"Mer"}}]}\n\n',
   'data: {"choices":[{"delta":{"content":"haba"}}]}\n\n',
